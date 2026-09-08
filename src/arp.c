@@ -55,6 +55,33 @@ size_t arp_parse(const uint8_t *buf, size_t buflen, struct arp_packet *out)
 	return w - buf;
 }
 
+int arp_build(uint8_t *out, uint16_t arp_op, uint8_t sha[6], uint8_t tha[6],
+	      uint32_t spa, uint32_t tpa)
+{
+	uint8_t *w = out;
+	uint16_t htype = htons(ARP_ETH_HTYPE), ptype = htons(ARP_IPV4_PTYPE),
+		 opcode = htons(arp_op);
+
+	memcpy(w, &htype, 2);
+	w += 2;
+	memcpy(w, &ptype, 2);
+	w += 2;
+	*w++ = ARP_HLEN_ETH;
+	*w++ = ARP_PLEN_IPV4;
+	memcpy(w, &opcode, 2);
+	w += 2;
+	memcpy(w, sha, 6);
+	w += 6;
+	memcpy(w, &spa, 4);
+	w += 4;
+	memcpy(w, tha, 6);
+	w += 6;
+	memcpy(w, &tpa, 4);
+	w += 4;
+
+	return w - out;
+}
+
 size_t arp_write_request(uint8_t *buf, size_t buflen, const uint16_t op,
 			 const uint8_t sha[6], uint32_t spa,
 			 const uint8_t tha[6], uint32_t tpa)

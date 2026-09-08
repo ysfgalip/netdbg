@@ -1,38 +1,66 @@
-#include "../include/ether.h"
 #include <linux/if_ether.h>
+#include <net/ethernet.h>
 #include <netinet/in.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
-size_t ether_parse(uint8_t *buf, size_t buflen, struct ethernet_frame *out)
+#include "../include/ether.h"
+
+size_t ether_parse(struct ethhdr *out, uint8_t *buf, size_t buflen)
 {
 	if (buflen < 60) {
 		return 0;
 	}
 
-	struct ethernet_frame temp = {0};
+	struct ethhdr temp = {0};
 	uint8_t *w = buf;
 
-	memcpy(temp.dst_mac, w, sizeof(temp.dst_mac));
-	w += sizeof(temp.dst_mac);
+	memcpy(temp.h_dest, w, sizeof(temp.h_dest));
+	w += sizeof(temp.h_dest);
 
-	memcpy(temp.src_mac, w, sizeof(temp.src_mac));
-	w += sizeof(temp.src_mac);
+	memcpy(temp.h_source, w, sizeof(temp.h_source));
+	w += sizeof(temp.h_source);
 
-	memcpy(&temp.ethertype, w, sizeof(temp.ethertype));
-	if (temp.ethertype == htons(ETH_P_8021Q)) {
+	memcpy(&temp.h_proto, w, sizeof(temp.h_proto));
+	if (temp.h_proto == htons(ETH_P_8021Q)) {
 		return 0;
 	}
-	w += sizeof(temp.ethertype);
+	w += sizeof(temp.h_proto);
 
-	int payload_length = buflen - ETH_HDR_LEN;
-	temp.payload = malloc(payload_length);
-	if (!temp.payload) {
-		return 0;
+	/* Probably a better idea to handle payload seperately. Because the
+	 * written size is returned payload's offset. buf can be calculated in
+	 * the caller
+	int payload_length = buflen - ETH_HDR_LEN; temp.payload =
+	malloc(payload_length); if (!temp.payload) { return 0;
 	}
 	memcpy(temp.payload, w, payload_length);
-	return 0;
+	*/
+
+	return w - buf;
+}
+
+size_t ether_build(struct ethhdr *out, const uint8_t dst_mac[6],
+		   const uint8_t src_mac[6], const uint16_t ethertype_host)
+{
+	struct ethhdr temp = {0};
+
+	const uint16_t ethertype_be = htons(ethertype_host);
+
+	memcpy(temp.h_dest, dst_mac, 6);
+	memcpy(temp.h_source, src_mac, 6);
+	temp.h_proto = ethertype_be;
+
+	/* Maybe a better idea to copy the paylaod externally
+	memcpy(temp.payload, payload, payload_len);
+	w += payload_len;
+	*/
+
+	memcpy(out, &temp, sizeof(temp));
+
+	size_t written_length = ETH_HDR_LEN;
+	return written_length;
 }
 
 size_t ether_write_frame(uint8_t buf[60], size_t buflen,
@@ -68,4 +96,32 @@ size_t ether_write_frame(uint8_t buf[60], size_t buflen,
 		total += pad;
 	}
 	return total;
+}
+
+size_t ether_build_frame(uint8_t *out, struct ethhdr *header, uint8_t *payload,
+			 size_t payload_len, size_t mtu)
+{
+	size_t frame_size = ETH_HDR_LEN + payload_len;
+	size_t padding_length = 0;
+	if (frame_size > mtu) {
+		return 0;
+	}
+
+	uint8_t *w = out;
+	memcpy(w, header->h_dest, 6);
+	w += 6;
+	memcpy(w, header->h_source, 6);
+	w += 6;
+	memcpy(w, &header->h_proto, 2);
+	w += 2;
+	memcpy(w, payload, payload_len);
+	w += payload_len;
+
+	if (frame_size < 60) {
+		padding_length = ETH_MIN_LEN - frame_size;
+		memset(w, '\0', padding_length);
+		w += padding_length;
+	}
+
+	return w - out;
 }

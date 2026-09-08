@@ -15,4 +15,8 @@ int sanitize_mac(const char *mac_nonsanitized, size_t in_length,
 
 int get_ifmac(const char *ifname, uint8_t mac_out[6]);
 
+int arp_lookup_local(uint32_t tpa_be, const char *ifname, uint8_t mac[6]);
+
+int get_if_mtu(const int fd, char *ifname);
+
 #endif

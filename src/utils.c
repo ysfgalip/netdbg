@@ -1,3 +1,4 @@
+#include <net/ethernet.h>
 #include <net/if.h>
 #include <net/if_arp.h>
 #include <netinet/in.h>
@@ -113,4 +114,14 @@ int arp_lookup_local(uint32_t tpa_be, const char *ifname, uint8_t mac[6])
 		return -1; /* missing or incomplete */
 	memcpy(mac, req.arp_ha.sa_data, 6);
 	return 0;
+}
+
+int get_if_mtu(const int fd, char *ifname)
+{
+	struct ifreq ifr = {0};
+	strncpy(ifr.ifr_name, ifname, IFNAMSIZ - 1);
+	ifr.ifr_name[IFNAMSIZ - 1] = '\0';
+	if (ioctl(fd, SIOCGIFMTU, &ifr) < 0)
+		return -1;
+	return ifr.ifr_mtu + ETHER_HDR_LEN;
 }

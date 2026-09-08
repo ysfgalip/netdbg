@@ -3,7 +3,6 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include <string.h>
 
 #define ARP_IPV4_PTYPE 0x0800
 #define ARP_ETH_HTYPE 1
@@ -28,6 +27,9 @@ struct arp_packet {
 };
 
 size_t arp_parse(const uint8_t *buf, size_t buflen, struct arp_packet *out);
+
+int arp_build(uint8_t *out, uint16_t arp_op, uint8_t sha[6], uint8_t tha[6],
+	      uint32_t spa, uint32_t tpa);
 
 size_t arp_write_request(uint8_t *buf, size_t buflen, const uint16_t op,
 			 const uint8_t sha[6], uint32_t spa_host,

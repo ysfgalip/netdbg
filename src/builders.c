@@ -1,39 +1,38 @@
-#include "../include/builders.h"
-#include "../include/arp.h"
-#include "../include/ether.h"
+#include <net/ethernet.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 
-int make_arp(size_t count, uint16_t arp_op, uint8_t src_mac[6],
-	     uint8_t dst_mac[6], uint32_t spa, uint32_t tpa,
-	     uint8_t eth_frame[60])
+#include "../include/arp.h"
+#include "../include/builders.h"
+#include "../include/ether.h"
+
+size_t make_arp(size_t count, uint16_t arp_op, uint8_t sha[6], uint8_t tha[6],
+		uint32_t spa, uint32_t tpa, uint8_t eth_frame[60])
 {
-	uint8_t arp_pkt[28];
-	size_t arp_size =
-	    arp_write_request(arp_pkt, 28, arp_op, src_mac, spa, dst_mac, tpa);
-	if (arp_size != 28) {
+	uint8_t packet[28] = {0};
+
+	size_t arp_size = arp_build(packet, arp_op, sha, tha, spa, tpa);
+	if (arp_size != ARP_LEN) {
 		return -1;
 	}
 
-	size_t eth_size = ether_write_frame(eth_frame, 60, dst_mac, src_mac,
-					    ETHERTYPE_ARP, arp_pkt, arp_size);
-	if (eth_size < ETH_MIN_LEN) {
-		return -1;
+	struct ethhdr ethernet_header = {0};
+	size_t eth_header_size =
+	    ether_build(&ethernet_header, tha, sha, ETHERTYPE_ARP);
+	if (eth_header_size != ETH_HDR_LEN) {
+		return -2;
 	}
-	printf("%zu", eth_size);
 
-	/* Implemented sw else but not sure
-	    int ifindex = if_nametoindex(ifname);
-	    int fd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+	uint8_t temp_frame[60] = {0};
+	size_t eth_size =
+	    ether_build_frame(temp_frame, &ethernet_header, (uint8_t *)&packet,
+			      arp_size, ETH_MAX_LEN);
+	if (eth_size != ETH_MIN_LEN) {
+		return -3;
+	}
 
-	    if(count == -2){
-		while (1) {
-		    ssize_t pkt = send_eth_frame(fd, eth_frame, eth_size,
-	   dst_mac, ifindex);
-		}
-	    }
-	    ssize_t pkt = send_eth_frame(fd, eth_frame, eth_size, dst_mac,
-	   ifindex);
-	*/
-	return 0;
+	memcpy(eth_frame, temp_frame, eth_size);
+
+	return eth_size;
 }

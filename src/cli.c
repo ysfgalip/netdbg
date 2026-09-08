@@ -4,13 +4,16 @@
 #include <errno.h>
 #include <linux/if_ether.h>
 #include <linux/kernel.h>
+#include <net/ethernet.h>
 #include <net/if.h>
 #include <net/if_arp.h>
 #include <poll.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/ioctl.h>
 #include <sys/poll.h>
 #include <sys/socket.h>
 
@@ -49,6 +52,58 @@ static const char *const usages[] = {
     NULL,
 };
 
+int arp_request(struct arp arp_options, size_t interval, int count)
+{
+	uint8_t frame[ETH_MAX_LEN] = {0};
+
+	size_t frame_length =
+	    make_arp(1, ARP_OP_REQUEST, arp_options.sha, arp_options.tha,
+		     arp_options.spa, arp_options.tpa, frame);
+
+	/* Implemented in make_arp
+	struct arp_packet packet = {0};
+	struct ethhdr ethernet_header = {0};
+
+	size_t arp_length =
+	    arp_build(&packet, ARP_OP_REQUEST, arp_options.sha, arp_options.tha,
+		      arp_options.spa, arp_options.tpa);
+	if (arp_length != ARP_LEN) {
+		return -1;
+	}
+
+	size_t ethernet_header_length = ether_build(
+	    &ethernet_header, arp_options.sha, arp_options.tha, ETHERTYPE_ARP);
+	if (ethernet_header_length != ETH_HLEN) {
+		return -1;
+	}
+
+	// Build the actual frame to send
+	size_t frame_length =
+	    ether_build_frame(frame, &ethernet_header, (uint8_t *)&packet,
+			      arp_length, ETH_MIN_LEN);
+	if (frame_length != 60) {
+		return -1;
+	}
+	*/
+
+	int fd = create_eth_socket(ETH_P_ARP);
+
+	size_t max = get_if_mtu(fd, arp_options.ifname);
+
+	if (frame_length > max) {
+		return -1;
+	}
+
+	// TODO: Implement loop with the provided interval and count
+	int bytes_sent = (int)send_eth_frame(
+	    fd, frame, frame_length, if_nametoindex(arp_options.ifname));
+	if (bytes_sent) {
+		printf("Bytes sent: %d\n", bytes_sent);
+	}
+
+	return 0;
+}
+
 int cmd_arp(int argc, const char **argv)
 {
 	struct arp arp_config = {
@@ -59,8 +114,10 @@ int cmd_arp(int argc, const char **argv)
 	};
 	struct argparse_option options[] = {
 	    OPT_HELP(),
-	    OPT_BOOLEAN(0, "dry-run", &arp_config.dryrun),
-	    OPT_STRING('i', "interface", &arp_config.ifname),
+	    OPT_BOOLEAN(0, "dry-run", &arp_config.dryrun,
+			"show the config without sending packets"),
+	    OPT_STRING('i', "interface", &arp_config.ifname,
+		       "interface to use"),
 	    OPT_STRING('s', "source-mac", &arp_config.string_sha),
 	    OPT_STRING('d', "destination-mac", &arp_config.string_tha),
 	    OPT_STRING('p', "source-ip", &arp_config.string_spa),
@@ -70,7 +127,12 @@ int cmd_arp(int argc, const char **argv)
 	struct argparse argparse;
 	argparse_init(&argparse, options, usages, 0);
 	argc = argparse_parse(&argparse, argc, argv);
-	printf("%s\n", arp_config.ifname);
+
+	if (arp_config.ifname == NULL || strlen(arp_config.ifname) > IFNAMSIZ) {
+		fprintf(stderr, "%s: Provide a valid interface name\n",
+			argv[0]);
+		return EXIT_FAILURE;
+	}
 
 	if (arp_config.string_sha[0] == '\0') {
 		if (get_ifmac(arp_config.ifname, arp_config.sha) == -1) {
@@ -83,7 +145,7 @@ int cmd_arp(int argc, const char **argv)
 		}
 		arp_config.string_sha = malloc(18 * sizeof(char));
 		if (!arp_config.string_sha) {
-			fprintf(stderr, "%s: Error on Sender MAC allcation\n",
+			fprintf(stderr, "%s: Error on Sender MAC allocation\n",
 				argv[0]);
 			return EXIT_FAILURE;
 		}
@@ -128,11 +190,11 @@ int cmd_arp(int argc, const char **argv)
 
 	// IP strings are set from the integers to get the actual used value
 	inet_pton(AF_INET, arp_config.string_spa, &arp_config.spa);
-	arp_config.string_spa = malloc(15 * sizeof(char));
-	inet_ntop(AF_INET, &arp_config.spa, arp_config.string_spa, 15);
+	arp_config.string_spa = malloc(16 * sizeof(char));
+	inet_ntop(AF_INET, &arp_config.spa, arp_config.string_spa, 16);
 	inet_pton(AF_INET, arp_config.string_tpa, &arp_config.tpa);
-	arp_config.string_tpa = malloc(15 * sizeof(char));
-	inet_ntop(AF_INET, &arp_config.tpa, arp_config.string_tpa, 15);
+	arp_config.string_tpa = malloc(16 * sizeof(char));
+	inet_ntop(AF_INET, &arp_config.tpa, arp_config.string_tpa, 16);
 
 	if (arp_config.dryrun) {
 		printf("Source MAC: %s\nDestination MAC: %s\nSource IP: "
@@ -143,11 +205,16 @@ int cmd_arp(int argc, const char **argv)
 		return 0;
 	}
 
+	if (arp_request(arp_config, 0, 0)) {
+		fprintf(stderr, "%s: Error sending the ARP request\n", argv[0]);
+		return EXIT_FAILURE;
+	}
+
 	uint8_t eth_frame[60];
 	make_arp(1, ARP_OP_REQUEST, arp_config.sha, arp_config.tha,
 		 arp_config.spa, arp_config.tpa, eth_frame);
 	int fd = create_eth_socket(ETH_P_ARP);
-	send_eth_frame(fd, eth_frame, 60, arp_config.tha,
+	send_eth_frame(fd, eth_frame, 60,
 		       if_nametoindex((char *)arp_config.ifname));
 
 	return 0;
@@ -189,8 +256,8 @@ int get_target_mac(uint32_t tpa, uint32_t spa, uint8_t sha[6], int ifindex,
 	uint8_t buf_recv_send[60];
 	uint8_t broadcast[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 	if (make_arp(0, ARP_OP_REQUEST, sha, broadcast, spa, tpa,
-		     buf_recv_send) != 0)
-		return 1;
+		     buf_recv_send) != ARP_LEN)
+		return -errno;
 	int fd = create_eth_socket(ETH_P_ARP);
 	if (fd < 0)
 		return -errno;
@@ -207,8 +274,8 @@ int get_target_mac(uint32_t tpa, uint32_t spa, uint8_t sha[6], int ifindex,
 
 		if (now >= attempt_end) {
 
-			if (send_eth_frame(fd, buf_recv_send, 60, broadcast,
-					   ifindex) < 0) {
+			if (send_eth_frame(fd, buf_recv_send, 60, ifindex) <
+			    0) {
 				rc = -errno;
 				break;
 			}
@@ -216,7 +283,7 @@ int get_target_mac(uint32_t tpa, uint32_t spa, uint8_t sha[6], int ifindex,
 			if (attempt_end >= deadline)
 				attempt_end = deadline;
 		}
-		uint8_t buf_recv[1514];
+		uint8_t buf_recv[ETH_MAX_LEN];
 
 		struct pollfd pfd = {.fd = fd, .events = POLLIN};
 		int timeout = (int)attempt_end - now;
@@ -234,11 +301,12 @@ int get_target_mac(uint32_t tpa, uint32_t spa, uint8_t sha[6], int ifindex,
 			return 1;
 		}
 
-		struct ethernet_frame ether_received = {0};
-		ether_parse(buf_recv, eth_size, &ether_received);
+		struct ethhdr ether_received = {0};
+		size_t header_length =
+		    ether_parse(&ether_received, buf_recv, eth_size);
 
 		struct arp_packet arp_received = {0};
-		arp_parse(ether_received.payload, eth_size - ETH_HDR_LEN,
+		arp_parse(buf_recv + header_length, eth_size - ETH_HDR_LEN,
 			  &arp_received);
 
 		if (arp_received.op != ARPOP_REPLY)
