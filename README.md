@@ -27,8 +27,9 @@ binary with:
 sudo setcap cap_net_raw=ep <path-to-binary>
 ```
 
-On success the amount of bytes sent is printed, and `-1` if there is
-something wrong.
+After running the binary, amount of bytes sent is printed on success, and
+`-1` if there is something wrong like missing capability.
 
 There is also dry-run support to view your packet details before sending.
+
 Further info on usage can be viewed in the help output.
