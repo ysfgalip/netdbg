@@ -4,8 +4,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-size_t make_arp(size_t count, uint16_t arp_op, uint8_t src_mac[6],
-		uint8_t dst_mac[6], uint32_t spa, uint32_t tpa,
+size_t make_arp(size_t count, uint16_t arp_op_le, uint8_t src_mac[6],
+		uint8_t dst_mac[6], uint32_t spa_be, uint32_t tpa_be,
 		uint8_t eth_frame[60]);
 
 #endif

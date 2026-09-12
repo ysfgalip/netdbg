@@ -38,7 +38,7 @@
 struct arp {
 	char *string_sha, *string_tha, *string_spa, *string_tpa, *ifname;
 	uint8_t sha[6], tha[6];
-	uint32_t spa, tpa;
+	uint32_t spa_be, tpa_be;
 	int dryrun;
 };
 
@@ -58,7 +58,7 @@ int arp_request(struct arp arp_options, size_t interval, int count)
 
 	size_t frame_length =
 	    make_arp(1, ARP_OP_REQUEST, arp_options.sha, arp_options.tha,
-		     arp_options.spa, arp_options.tpa, frame);
+		     arp_options.spa_be, arp_options.tpa_be, frame);
 
 	/* Implemented in make_arp
 	struct arp_packet packet = {0};
@@ -189,12 +189,12 @@ int cmd_arp(int argc, const char **argv)
 	}
 
 	// IP strings are set from the integers to get the actual used value
-	inet_pton(AF_INET, arp_config.string_spa, &arp_config.spa);
+	inet_pton(AF_INET, arp_config.string_spa, &arp_config.spa_be);
 	arp_config.string_spa = malloc(16 * sizeof(char));
-	inet_ntop(AF_INET, &arp_config.spa, arp_config.string_spa, 16);
-	inet_pton(AF_INET, arp_config.string_tpa, &arp_config.tpa);
+	inet_ntop(AF_INET, &arp_config.spa_be, arp_config.string_spa, 16);
+	inet_pton(AF_INET, arp_config.string_tpa, &arp_config.tpa_be);
 	arp_config.string_tpa = malloc(16 * sizeof(char));
-	inet_ntop(AF_INET, &arp_config.tpa, arp_config.string_tpa, 16);
+	inet_ntop(AF_INET, &arp_config.tpa_be, arp_config.string_tpa, 16);
 
 	if (arp_config.dryrun) {
 		printf("Source MAC: %s\nDestination MAC: %s\nSource IP: "
@@ -212,7 +212,7 @@ int cmd_arp(int argc, const char **argv)
 
 	uint8_t eth_frame[60];
 	make_arp(1, ARP_OP_REQUEST, arp_config.sha, arp_config.tha,
-		 arp_config.spa, arp_config.tpa, eth_frame);
+		 arp_config.spa_be, arp_config.tpa_be, eth_frame);
 	int fd = create_eth_socket(ETH_P_ARP);
 	send_eth_frame(fd, eth_frame, 60,
 		       if_nametoindex((char *)arp_config.ifname));
@@ -250,12 +250,12 @@ int main(int argc, const char **argv)
 
 // TODO: Rename variables to *_be (big endian) and *_le (little endian) for
 // clarity
-int get_target_mac(uint32_t tpa, uint32_t spa, uint8_t sha[6], int ifindex,
-		   uint8_t out_mac[6])
+int get_target_mac(uint32_t tpa_be, uint32_t spa_be, uint8_t sha[6],
+		   int ifindex, uint8_t out_mac[6])
 {
 	uint8_t buf_recv_send[60];
 	uint8_t broadcast[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-	if (make_arp(0, ARP_OP_REQUEST, sha, broadcast, spa, tpa,
+	if (make_arp(0, ARP_OP_REQUEST, sha, broadcast, spa_be, tpa_be,
 		     buf_recv_send) != ARP_LEN)
 		return -errno;
 	int fd = create_eth_socket(ETH_P_ARP);
@@ -312,7 +312,8 @@ int get_target_mac(uint32_t tpa, uint32_t spa, uint8_t sha[6], int ifindex,
 		if (arp_received.op != ARPOP_REPLY)
 			continue;
 
-		if (arp_received.spa != tpa || arp_received.tpa != spa)
+		if (arp_received.spa_be != tpa_be ||
+		    arp_received.tpa_be != spa_be)
 			continue;
 
 		memcpy(out_mac, arp_received.sha, 6);

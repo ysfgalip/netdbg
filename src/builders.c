@@ -7,12 +7,14 @@
 #include "../include/builders.h"
 #include "../include/ether.h"
 
-size_t make_arp(size_t count, uint16_t arp_op, uint8_t sha[6], uint8_t tha[6],
-		uint32_t spa, uint32_t tpa, uint8_t eth_frame[60])
+size_t make_arp(size_t count, uint16_t arp_op_le, uint8_t sha[6],
+		uint8_t tha[6], uint32_t spa_be, uint32_t tpa_be,
+		uint8_t eth_frame[60])
 {
 	uint8_t packet[28] = {0};
 
-	size_t arp_size = arp_build(packet, arp_op, sha, tha, spa, tpa);
+	size_t arp_size =
+	    arp_build(packet, arp_op_le, sha, tha, spa_be, tpa_be);
 	if (arp_size != ARP_LEN) {
 		return -1;
 	}
