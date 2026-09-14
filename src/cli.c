@@ -125,6 +125,8 @@ int cmd_arp(int argc, const char **argv)
 	    OPT_END()};
 
 	struct argparse argparse;
+	char sanitized_sha[18] = {0};
+	char sanitized_tha[18] = {0};
 	argparse_init(&argparse, options, usages, 0);
 	argc = argparse_parse(&argparse, argc, argv);
 
@@ -141,20 +143,6 @@ int cmd_arp(int argc, const char **argv)
 				"provided a valid "
 				"ifname\n",
 				argv[0]);
-			return EXIT_FAILURE;
-		}
-		arp_config.string_sha = malloc(18 * sizeof(char));
-		if (!arp_config.string_sha) {
-			fprintf(stderr, "%s: Error on Sender MAC allocation\n",
-				argv[0]);
-			return EXIT_FAILURE;
-		}
-		if (mac_to_string(arp_config.string_sha, arp_config.sha) !=
-		    17) {
-			fprintf(stderr,
-				"%s: Error getting the MAC Address of the "
-				"interface %s\n",
-				argv[0], arp_config.ifname);
 			return EXIT_FAILURE;
 		}
 	} else {
@@ -180,13 +168,22 @@ int cmd_arp(int argc, const char **argv)
 		return EXIT_FAILURE;
 	}
 
-	// Allocate +1 for the '\0' terminator
-	arp_config.string_tha = (char *)malloc(18 * sizeof(char));
-	if (mac_to_string(arp_config.string_tha, arp_config.tha) != 17) {
+	// Set the strings again from the sanitized mac to show most accurate
+	// config
+	if (mac_to_string(sanitized_sha, arp_config.sha) != 17) {
+		fprintf(stderr,
+			"%s: Error getting the MAC Address of the "
+			"interface %s\n",
+			argv[0], arp_config.ifname);
+		return EXIT_FAILURE;
+	}
+	if (mac_to_string(sanitized_tha, arp_config.tha) != 17) {
 		fprintf(stderr, "%s: Error writing the destination MAC",
 			argv[0]);
 		return EXIT_FAILURE;
 	}
+	arp_config.string_sha = sanitized_sha;
+	arp_config.string_tha = sanitized_tha;
 
 	// IP strings are set from the integers to get the actual used value
 	inet_pton(AF_INET, arp_config.string_spa, &arp_config.spa_be);
@@ -209,13 +206,6 @@ int cmd_arp(int argc, const char **argv)
 		fprintf(stderr, "%s: Error sending the ARP request\n", argv[0]);
 		return EXIT_FAILURE;
 	}
-
-	uint8_t eth_frame[60];
-	make_arp(1, ARP_OP_REQUEST, arp_config.sha, arp_config.tha,
-		 arp_config.spa_be, arp_config.tpa_be, eth_frame);
-	int fd = create_eth_socket(ETH_P_ARP);
-	send_eth_frame(fd, eth_frame, 60,
-		       if_nametoindex((char *)arp_config.ifname));
 
 	return 0;
 }

@@ -5,7 +5,7 @@
 #include <string.h>
 
 #define ETH_HDR_LEN 14
-#define ETH_MIN_LEN 56
+#define ETH_MIN_LEN 60
 #define ETH_MAX_LEN 1514
 #define ETH_TYPE_ARP 0x0806
 #define ETH_PADDING 0x00
