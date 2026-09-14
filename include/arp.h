@@ -31,8 +31,4 @@ size_t arp_parse(const uint8_t *buf, size_t buflen, struct arp_packet *out);
 int arp_build(uint8_t *out, uint16_t arp_op_le, uint8_t sha[6], uint8_t tha[6],
 	      uint32_t spa_be, uint32_t tpa_be);
 
-size_t arp_write_request(uint8_t *buf, size_t buflen, const uint16_t arp_op_le,
-			 const uint8_t sha[6], uint32_t spa_be,
-			 const uint8_t tha[6], uint32_t tpa_be);
-
 #endif

@@ -22,11 +22,6 @@ size_t ether_parse(struct ethhdr *out, uint8_t *buf, size_t buflen);
 size_t ether_build(struct ethhdr *out, const uint8_t dst_mac[6],
 		   const uint8_t src_mac[6], const uint16_t ethertype_host);
 
-size_t ether_write_frame(uint8_t buf[60], size_t buflen,
-			 const uint8_t dst_mac[6], const uint8_t src_mac[6],
-			 const uint16_t ethertype_host, const uint8_t *payload,
-			 size_t payload_len);
-
 size_t ether_build_frame(uint8_t *out, struct ethhdr *header, uint8_t *payload,
 			 size_t payload_len, size_t mtu);
 

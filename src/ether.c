@@ -29,15 +29,6 @@ size_t ether_parse(struct ethhdr *out, uint8_t *buf, size_t buflen)
 	}
 	w += sizeof(temp.h_proto);
 
-	/* Probably a better idea to handle payload seperately. Because the
-	 * written size is returned payload's offset. buf can be calculated in
-	 * the caller
-	int payload_length = buflen - ETH_HDR_LEN; temp.payload =
-	malloc(payload_length); if (!temp.payload) { return 0;
-	}
-	memcpy(temp.payload, w, payload_length);
-	*/
-
 	return w - buf;
 }
 
@@ -52,50 +43,10 @@ size_t ether_build(struct ethhdr *out, const uint8_t dst_mac[6],
 	memcpy(temp.h_source, src_mac, 6);
 	temp.h_proto = ethertype_be;
 
-	/* Maybe a better idea to copy the paylaod externally
-	memcpy(temp.payload, payload, payload_len);
-	w += payload_len;
-	*/
-
 	memcpy(out, &temp, sizeof(temp));
 
 	size_t written_length = ETH_HDR_LEN;
 	return written_length;
-}
-
-size_t ether_write_frame(uint8_t buf[60], size_t buflen,
-			 const uint8_t dst_mac[6], const uint8_t src_mac[6],
-			 const uint16_t ethertype_host, const uint8_t *payload,
-			 size_t payload_len)
-{
-	// Buffer and payload checks
-	if (buflen < ETH_MIN_LEN || buflen < payload_len + ETH_HDR_LEN)
-		return 0;
-	if (payload_len > 1500)
-		return 0;
-
-	uint8_t *w = buf;
-
-	const uint16_t ethertype_be = htons(ethertype_host);
-
-	memcpy(w, dst_mac, 6);
-	w += 6;
-	memcpy(w, src_mac, 6);
-	w += 6;
-	memcpy(w, &ethertype_be, 2);
-	w += 2;
-
-	memcpy(w, payload, payload_len);
-	w += payload_len;
-
-	size_t total = (size_t)(w - buf);
-	if (total < ETH_MIN_LEN) {
-		size_t pad = ETH_MIN_LEN - total;
-		memset(w, ETH_PADDING, pad);
-		w += pad;
-		total += pad;
-	}
-	return total;
 }
 
 size_t ether_build_frame(uint8_t *out, struct ethhdr *header, uint8_t *payload,

@@ -60,32 +60,6 @@ int arp_request(struct arp arp_options, size_t interval, int count)
 	    make_arp(1, ARP_OP_REQUEST, arp_options.sha, arp_options.tha,
 		     arp_options.spa_be, arp_options.tpa_be, frame);
 
-	/* Implemented in make_arp
-	struct arp_packet packet = {0};
-	struct ethhdr ethernet_header = {0};
-
-	size_t arp_length =
-	    arp_build(&packet, ARP_OP_REQUEST, arp_options.sha, arp_options.tha,
-		      arp_options.spa, arp_options.tpa);
-	if (arp_length != ARP_LEN) {
-		return -1;
-	}
-
-	size_t ethernet_header_length = ether_build(
-	    &ethernet_header, arp_options.sha, arp_options.tha, ETHERTYPE_ARP);
-	if (ethernet_header_length != ETH_HLEN) {
-		return -1;
-	}
-
-	// Build the actual frame to send
-	size_t frame_length =
-	    ether_build_frame(frame, &ethernet_header, (uint8_t *)&packet,
-			      arp_length, ETH_MIN_LEN);
-	if (frame_length != 60) {
-		return -1;
-	}
-	*/
-
 	int fd = create_eth_socket(ETH_P_ARP);
 
 	size_t max = get_if_mtu(fd, arp_options.ifname);

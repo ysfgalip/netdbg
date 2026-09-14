@@ -81,34 +81,3 @@ int arp_build(uint8_t *out, uint16_t arp_op, uint8_t sha[6], uint8_t tha[6],
 
 	return w - out;
 }
-
-size_t arp_write_request(uint8_t *buf, size_t buflen, const uint16_t arp_op_le,
-			 const uint8_t sha[6], uint32_t spa_be,
-			 const uint8_t tha[6], uint32_t tpa_be)
-{
-	if (buflen < ARP_LEN)
-		return 0;
-	uint8_t *w = buf;
-
-	uint16_t htype_be = htons(ARP_ETH_HTYPE),
-		 ptype_be = htons(ARP_IPV4_PTYPE), opcode_be = htons(arp_op_le);
-
-	memcpy(w, &htype_be, 2);
-	w += 2;
-	memcpy(w, &ptype_be, 2);
-	w += 2;
-	*w++ = ARP_HLEN_ETH;
-	*w++ = ARP_PLEN_IPV4;
-	memcpy(w, &opcode_be, 2);
-	w += 2;
-	memcpy(w, sha, 6);
-	w += 6;
-	memcpy(w, &spa_be, 4);
-	w += 4;
-	memcpy(w, tha, 6);
-	w += 6;
-	memcpy(w, &tpa_be, 4);
-	w += 4;
-
-	return ARP_LEN;
-}
