@@ -6,6 +6,8 @@
 
 uint64_t now_ms(void);
 
+void delay_ms(size_t time);
+
 void hextoint(const char *hex, size_t length, uint8_t *hex_int);
 
 int mac_to_string(char *mac_out, const uint8_t mac_in[6]);

@@ -68,11 +68,16 @@ int arp_request(struct arp arp_options, size_t interval, int count)
 		return -1;
 	}
 
-	// TODO: Implement loop with the provided interval and count
-	int bytes_sent = (int)send_eth_frame(
-	    fd, frame, frame_length, if_nametoindex(arp_options.ifname));
-	if (bytes_sent) {
-		printf("Bytes sent: %d\n", bytes_sent);
+	for (int i = 0; i < count; i++) {
+		int bytes_sent =
+		    (int)send_eth_frame(fd, frame, frame_length,
+					if_nametoindex(arp_options.ifname));
+		if (bytes_sent) {
+			printf("Bytes sent: %d\n", bytes_sent);
+		}
+		if (i == count - 1)
+			break;
+		delay_ms(interval);
 	}
 
 	return 0;
@@ -176,7 +181,7 @@ int cmd_arp(int argc, const char **argv)
 		return 0;
 	}
 
-	if (arp_request(arp_config, 0, 0)) {
+	if (arp_request(arp_config, 0, 1)) {
 		fprintf(stderr, "%s: Error sending the ARP request\n", argv[0]);
 		return EXIT_FAILURE;
 	}

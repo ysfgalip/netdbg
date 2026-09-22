@@ -2,6 +2,7 @@
 #include <net/if.h>
 #include <net/if_arp.h>
 #include <netinet/in.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,6 +18,14 @@ uint64_t now_ms(void)
 	struct timespec ts;
 	clock_gettime(CLOCK_MONOTONIC, &ts);
 	return (uint64_t)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+}
+
+void delay_ms(size_t time)
+{
+	uint64_t start = now_ms();
+	while (now_ms() - start < time)
+		;
+	return;
 }
 
 // Converts a given str of a hex number to uint8_t array
