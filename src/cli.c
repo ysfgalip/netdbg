@@ -91,16 +91,21 @@ int cmd_arp(int argc, const char **argv)
 	    .string_spa = "",
 	    .string_tpa = "",
 	};
+
 	struct argparse_option options[] = {
 	    OPT_HELP(),
 	    OPT_BOOLEAN(0, "dry-run", &arp_config.dryrun,
 			"show the config without sending packets"),
 	    OPT_STRING('i', "interface", &arp_config.ifname,
 		       "interface to use"),
-	    OPT_STRING('s', "source-mac", &arp_config.string_sha),
-	    OPT_STRING('d', "destination-mac", &arp_config.string_tha),
-	    OPT_STRING('p', "source-ip", &arp_config.string_spa),
-	    OPT_STRING('t', "destination-ip", &arp_config.string_tpa),
+	    OPT_STRING(0, "source-mac", &arp_config.string_sha,
+		       "SHA to use in the ARP packet"),
+	    OPT_STRING(0, "destination-mac", &arp_config.string_tha,
+		       "THA to use in the ARP packet"),
+	    OPT_STRING(0, "source-ip", &arp_config.string_spa,
+		       "SPA to use in the ARP packet"),
+	    OPT_STRING(0, "destination-ip", &arp_config.string_tpa,
+		       "TPA to use in the ARP packet"),
 	    OPT_END()};
 
 	struct argparse argparse;
@@ -124,17 +129,15 @@ int cmd_arp(int argc, const char **argv)
 				argv[0]);
 			return EXIT_FAILURE;
 		}
-	} else {
-		if (sanitize_mac(arp_config.string_sha,
-				 strlen(arp_config.string_sha), arp_config.sha,
-				 sizeof(arp_config.sha)) != 6) {
-			fprintf(stderr,
-				"%s: Please provide MACs in the "
-				"correct format "
-				"(XX:XX:XX:XX:XX:XX)\n",
-				argv[0]);
-			return EXIT_FAILURE;
-		}
+	} else if (sanitize_mac(arp_config.string_sha,
+				strlen(arp_config.string_sha), arp_config.sha,
+				sizeof(arp_config.sha)) != 6) {
+		fprintf(stderr,
+			"%s: Please provide MACs in the "
+			"correct format "
+			"(XX:XX:XX:XX:XX:XX)\n",
+			argv[0]);
+		return EXIT_FAILURE;
 	}
 
 	if (sanitize_mac(arp_config.string_tha, strlen(arp_config.string_tha),
