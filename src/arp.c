@@ -1,12 +1,7 @@
-#include <memory.h>
-#include <stddef.h>
-#include <stdint.h>
+#include "../include/arp.h"
 
 #include <netinet/in.h>
 #include <string.h>
-#include <sys/socket.h>
-
-#include "../include/arp.h"
 
 size_t arp_parse(const uint8_t *buf, size_t buflen, struct arp_packet *out)
 {

@@ -1,10 +1,5 @@
-#include <linux/if_ether.h>
 #include <net/ethernet.h>
 #include <netinet/in.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
 
 #include "../include/ether.h"
 

@@ -1,12 +1,10 @@
+#include "../include/socket.h"
+
 #include <errno.h>
-#include <linux/if_ether.h>
 #include <linux/if_packet.h>
 #include <net/ethernet.h>
 #include <netinet/in.h>
-#include <stdint.h>
 #include <string.h>
-
-#include "../include/socket.h"
 
 int create_eth_socket(uint16_t eth_protoh)
 {

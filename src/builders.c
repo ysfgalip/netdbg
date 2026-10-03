@@ -1,10 +1,8 @@
+#include "../include/builders.h"
+
 #include <net/ethernet.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <stdio.h>
 
 #include "../include/arp.h"
-#include "../include/builders.h"
 #include "../include/ether.h"
 
 size_t make_arp(size_t count, uint16_t arp_op_le, uint8_t sha[6],

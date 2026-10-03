@@ -1,16 +1,14 @@
+#include "../include/utils.h"
+
 #include <net/ethernet.h>
 #include <net/if.h>
 #include <net/if_arp.h>
 #include <netinet/in.h>
-#include <stddef.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
 #include <time.h>
-
-#include "../include/utils.h"
 
 // Gives the monotonic time in milliseconds
 uint64_t now_ms(void)
